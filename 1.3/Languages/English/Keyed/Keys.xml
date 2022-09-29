@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+	<DesignatorGardenZoneDesc>Create a zone where your colonists will try to grow random plants for decor.</DesignatorGardenZoneDesc>
+	<GardenZoneDesc>A zone where your colonists will try to grow random plants for decor.</GardenZoneDesc>
+	<GardenZone>Garden zone</GardenZone>
+	<GardensPlantSelect>Select plants</GardensPlantSelect>
+	<TabPlants>Select Plants</TabPlants>
+</LanguageData>
