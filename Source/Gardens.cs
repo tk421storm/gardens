@@ -129,7 +129,7 @@ namespace TKS_Gardens
             if (plantThere!=null)
             {
                 if (PlantFilter.Allows(plantThere)) {
-                    //Log.Message("returning def " + plantThere.def + " because it already fits the filter");
+                    Log.Message("returning def " + plantThere.def + " because it already fits the filter");
                     return plantThere.def;
                 } else
                 {
@@ -596,7 +596,7 @@ namespace TKS_Gardens
                 Job job = JobMaker.MakeJob(JobDefOf.Sow, c);
                 job.plantDefToSow = wantedPlantDef;
 
-                //Log.Message("returning job for garden zone: " + job.ToString());
+                Log.Message("returning job for garden zone: " + job.ToString());
                 __result = job;
                 return false;
             }
@@ -613,7 +613,7 @@ namespace TKS_Gardens
                 yield return value;
             }
 
-            //Log.Message("checking for garden zones to plant");
+            Log.Message("checking for garden zones to plant");
             Danger maxDanger = pawn.NormalMaxDanger();
 
             //cannot access this private field from IEnumerable postfix
@@ -642,7 +642,7 @@ namespace TKS_Gardens
 
                         if (gardenCells.Count>0)
                         {
-                            //Log.Message("returning " + gardenCells.Count.ToString() + " garden cells for planting");
+                           Log.Message("returning " + gardenCells.Count.ToString() + " garden cells for planting");
                             foreach (var value in gardenCells)
                             {
                                 //wantedPlantDefField.SetValue(__instance, null);
@@ -655,6 +655,49 @@ namespace TKS_Gardens
 
             yield break;
             yield break;
+        }
+    }
+
+    [HarmonyPatch(typeof(Plant))]
+    public class Plant_Patches
+    {
+        [HarmonyPatch(typeof(Plant), "MakeLeafless")]
+        [HarmonyPrefix]
+        public static bool MakeLeafless(ref Plant __instance, Plant.LeaflessCause cause)
+        {
+            //Log.Message("running MakeLeafless on plant " + __instance.ToString());
+            Map map = __instance.Map;
+
+            //check if we're in a garden zone, otherwise do original method
+            Zone_Garden gardenZone = GridsUtility.GetZone(__instance.Position, map) as Zone_Garden;
+
+            if (gardenZone is null)
+            {
+                return true;
+            }
+
+            //Log.Warning("running MakeLeafless on garden zone plant " + __instance.ToString());
+            bool flag = !__instance.LeaflessNow;
+
+            if (cause == Plant.LeaflessCause.Poison && __instance.def.plant.leaflessGraphic == null)
+            {
+                __instance.TakeDamage(new DamageInfo(DamageDefOf.Rotting, 99999f, 0f, -1f, null, null, null, DamageInfo.SourceCategory.ThingOrUnknown, null, true, true));
+            }
+            else if (__instance.def.plant.dieIfLeafless)
+            {
+                __instance.TakeDamage(new DamageInfo(DamageDefOf.Rotting, 99999f, 0f, -1f, null, null, null, DamageInfo.SourceCategory.ThingOrUnknown, null, true, true));
+            }
+            else
+            {
+                FieldInfo madeLeaflessTickField = __instance.GetType().GetField("madeLeaflessTick", BindingFlags.NonPublic | BindingFlags.Instance);
+                madeLeaflessTickField.SetValue(__instance, Find.TickManager.TicksGame);
+            }
+            if (flag)
+            {
+                map.mapDrawer.MapMeshDirty(__instance.Position, MapMeshFlag.Things);
+            }
+
+            return false;
         }
     }
 }

@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<SpecialThingFilterDef>
+		<defName>NonEdiblePlants</defName>
+		<label>allow non-edible plants</label>
+		<description>Plants that are used for decor only.</description>
+		<parentCategory>Root</parentCategory>
+		<allowedByDefault>true</allowedByDefault>
+		<saveKey>nonEdiblePlants</saveKey>
+		<workerClass>TKS_Gardens.SpecialThingFilterWorker_DecorPlants</workerClass>
+	</SpecialThingFilterDef>
+</Defs>
