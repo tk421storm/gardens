@@ -30,9 +30,9 @@ namespace TKS_Gardens
         static InsertHarmony()
         {
             Harmony harmony = new Harmony("TKS_Gardens");
-            Harmony.DEBUG = true;
+            //Harmony.DEBUG = true;
             harmony.PatchAll();
-            Harmony.DEBUG = false;
+            //Harmony.DEBUG = false;
             Log.Message($"TKS_Gardens: Patching finished");
         }
     }
@@ -129,11 +129,11 @@ namespace TKS_Gardens
             if (plantThere!=null)
             {
                 if (PlantFilter.Allows(plantThere)) {
-                    Log.Message("returning def " + plantThere.def + " because it already fits the filter");
+                    //Log.Message("returning def " + plantThere.def + " because it already fits the filter");
                     return plantThere.def;
                 } else
                 {
-                    Log.Warning("already a plant at "+loc.ToString()+", but it doesn't fit the filter");
+                    //Log.Warning("already a plant at "+loc.ToString()+", but it doesn't fit the filter");
                 }
             }
 
@@ -596,7 +596,7 @@ namespace TKS_Gardens
                 Job job = JobMaker.MakeJob(JobDefOf.Sow, c);
                 job.plantDefToSow = wantedPlantDef;
 
-                Log.Message("returning job for garden zone: " + job.ToString());
+                //Log.Message("returning job for garden zone: " + job.ToString());
                 __result = job;
                 return false;
             }
@@ -613,7 +613,7 @@ namespace TKS_Gardens
                 yield return value;
             }
 
-            Log.Message("checking for garden zones to plant");
+            //Log.Message("checking for garden zones to plant");
             Danger maxDanger = pawn.NormalMaxDanger();
 
             //cannot access this private field from IEnumerable postfix
@@ -642,7 +642,7 @@ namespace TKS_Gardens
 
                         if (gardenCells.Count>0)
                         {
-                           Log.Message("returning " + gardenCells.Count.ToString() + " garden cells for planting");
+                           //Log.Message("returning " + gardenCells.Count.ToString() + " garden cells for planting");
                             foreach (var value in gardenCells)
                             {
                                 //wantedPlantDefField.SetValue(__instance, null);
