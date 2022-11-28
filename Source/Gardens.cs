@@ -12,12 +12,13 @@ using Verse.Sound;
 
 namespace TKS_Gardens
 {
+    /*
     [DefOf]
     class SpecialThingFilterDefOf
     {
         public static SpecialThingFilterDef NonEdiblePlants;
     }
-
+    */
     [DefOf]
     class ThingCategoryDefOf
     {
@@ -47,11 +48,13 @@ namespace TKS_Gardens
             symbolGardens = ContentFinder<Texture2D>.Get("UI/Designators/ZoneCreate_Gardens");
         }
     }
-
+    /*
     public class SpecialThingFilterWorker_DecorPlants : SpecialThingFilterWorker
     {
         public override bool Matches(Thing t)
         {
+            if (t == null) { return false; };
+
             CompRottable compRottable = t.TryGetComp<CompRottable>();
             if (compRottable == null)
             {
@@ -73,7 +76,7 @@ namespace TKS_Gardens
             return (compProperties != null);
         }
     }
-
+    */
     public class Zone_Garden : Zone , IPlantToGrowSettable
     {
         public override bool IsMultiselectable
@@ -363,7 +366,7 @@ namespace TKS_Gardens
 
         private IEnumerable<SpecialThingFilterDef> HiddenSpecialThingFilters()
         {
-            yield return TKS_Gardens.SpecialThingFilterDefOf.NonEdiblePlants;
+            //yield return TKS_Gardens.SpecialThingFilterDefOf.NonEdiblePlants;
             yield break;
         }
 
@@ -655,49 +658,6 @@ namespace TKS_Gardens
 
             yield break;
             yield break;
-        }
-    }
-
-    [HarmonyPatch(typeof(Plant))]
-    public class Plant_Patches
-    {
-        [HarmonyPatch(typeof(Plant), "MakeLeafless")]
-        [HarmonyPrefix]
-        public static bool MakeLeafless(ref Plant __instance, Plant.LeaflessCause cause)
-        {
-            //Log.Message("running MakeLeafless on plant " + __instance.ToString());
-            Map map = __instance.Map;
-
-            //check if we're in a garden zone, otherwise do original method
-            Zone_Garden gardenZone = GridsUtility.GetZone(__instance.Position, map) as Zone_Garden;
-
-            if (gardenZone is null)
-            {
-                return true;
-            }
-
-            //Log.Warning("running MakeLeafless on garden zone plant " + __instance.ToString());
-            bool flag = !__instance.LeaflessNow;
-
-            if (cause == Plant.LeaflessCause.Poison && __instance.def.plant.leaflessGraphic == null)
-            {
-                __instance.TakeDamage(new DamageInfo(DamageDefOf.Rotting, 99999f, 0f, -1f, null, null, null, DamageInfo.SourceCategory.ThingOrUnknown, null, true, true));
-            }
-            else if (__instance.def.plant.dieIfLeafless)
-            {
-                __instance.TakeDamage(new DamageInfo(DamageDefOf.Rotting, 99999f, 0f, -1f, null, null, null, DamageInfo.SourceCategory.ThingOrUnknown, null, true, true));
-            }
-            else
-            {
-                FieldInfo madeLeaflessTickField = __instance.GetType().GetField("madeLeaflessTick", BindingFlags.NonPublic | BindingFlags.Instance);
-                madeLeaflessTickField.SetValue(__instance, Find.TickManager.TicksGame);
-            }
-            if (flag)
-            {
-                map.mapDrawer.MapMeshDirty(__instance.Position, MapMeshFlag.Things);
-            }
-
-            return false;
         }
     }
 }
