@@ -3,8 +3,6 @@ using RimWorld;
 using UnityEngine;
 using System;
 using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Collections.Generic;
 using Verse;
 using Verse.AI;
@@ -48,35 +46,6 @@ namespace TKS_Gardens
             symbolGardens = ContentFinder<Texture2D>.Get("UI/Designators/ZoneCreate_Gardens");
         }
     }
-    /*
-    public class SpecialThingFilterWorker_DecorPlants : SpecialThingFilterWorker
-    {
-        public override bool Matches(Thing t)
-        {
-            if (t == null) { return false; };
-
-            CompRottable compRottable = t.TryGetComp<CompRottable>();
-            if (compRottable == null)
-            {
-                return (!t.def.IsIngestible && !t.def.plant.Harvestable);
-            } else
-            {
-                return !t.def.plant.Harvestable;
-            }
-        }
-
-        public override bool CanEverMatch(ThingDef def)
-        {
-            return def.GetCompProperties<CompProperties_Rottable>() != null;
-        }
-
-        public override bool AlwaysMatches(ThingDef def)
-        {
-            CompProperties_Rottable compProperties = def.GetCompProperties<CompProperties_Rottable>();
-            return (compProperties != null);
-        }
-    }
-    */
     public class Zone_Garden : Zone , IPlantToGrowSettable
     {
         public override bool IsMultiselectable
@@ -106,6 +75,8 @@ namespace TKS_Gardens
         {
             base.ExposeData();
             Scribe_Deep.Look<ThingFilter>(ref this.plantFilter, "animalFilter", Array.Empty<object>());
+            Scribe_Values.Look<bool>(ref this.allowSow, "allowSow", true, false);
+            Scribe_Values.Look<bool>(ref this.allowCut, "allowCut", true, false);
         }
 
         public ThingDef GetPlantDefToGrow()
