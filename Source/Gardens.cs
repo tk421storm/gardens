@@ -4,24 +4,35 @@ using UnityEngine;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
 
 namespace TKS_Gardens
 {
-    /*
-    [DefOf]
-    class SpecialThingFilterDefOf
+
+    public static class Util
     {
-        public static SpecialThingFilterDef NonEdiblePlants;
+        public static int GetSequenceHashCode<T>(this IList<T> sequence)
+        {
+            const int seed = 487;
+            const int modifier = 31;
+
+            unchecked
+            {
+                return sequence.Aggregate(seed, (current, item) =>
+                    (current * modifier) + item.GetHashCode());
+            }
+        }
     }
-    */
+
     [DefOf]
     class ThingCategoryDefOf
     {
         public static ThingCategoryDef Plants;
     }
+
 
     [StaticConstructorOnStartup]
     public static class InsertHarmony
@@ -46,6 +57,196 @@ namespace TKS_Gardens
             symbolGardens = ContentFinder<Texture2D>.Get("UI/Designators/ZoneCreate_Gardens");
         }
     }
+
+    public class TKS_GardensSettings : ModSettings
+    {
+        public bool debugPrint = false;
+        public bool allowAllPlants = true;
+
+        public override void ExposeData()
+        {
+            Scribe_Values.Look(ref debugPrint, "debugPrint");
+            Scribe_Values.Look(ref allowAllPlants, "allowAllPlants");
+
+            base.ExposeData();
+        }
+    }
+
+    public class TKS_GardensMapComponent : MapComponent
+    {
+        private Dictionary<int, String> plantCache;
+
+        public List<ThingDef> plantablePlants;
+
+        public int plantablePlantsHash;
+
+        public TKS_GardensMapComponent(Map map) : base(map)
+        {
+            this.map = map;
+
+        }
+
+        public override void FinalizeInit()
+        {
+
+            base.FinalizeInit();
+
+
+            if (this.plantCache == null)
+            {
+                this.plantCache = new Dictionary<int, String>();
+            }
+
+            //get all plantable plants on map and hash it (check for mod updates)
+            this.plantablePlants = this.availablePlants();
+
+            this.plantablePlantsHash = plantablePlants.GetSequenceHashCode<ThingDef>();
+
+        }
+
+        public List<ThingDef> availablePlants()
+        {
+            List<ThingDef> defs = new List<ThingDef>();
+
+            TKS_Gardens.DebugMessage("getting all plants for garden planting");
+
+            bool allowAllPlants = LoadedModManager.GetMod<TKS_Gardens>().GetSettings<TKS_GardensSettings>().allowAllPlants;
+
+            foreach (ThingDef def in DefDatabase<ThingDef>.AllDefsListForReading)
+            {
+
+                if (def != null && def.IsWithinCategory(ThingCategoryDefOf.Plants))
+                {
+                    
+                    bool allow = true;
+                    if (!allowAllPlants && def.plant.sowMinSkill == 0)
+                    {
+                        allow = false;
+                    }
+
+                    if (allow && !defs.Contains(def)) { defs.Add(def); }
+                }
+            }
+
+            return defs;
+        }
+
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Collections.Look(ref this.plantCache, "plantCache", LookMode.Value);
+        }
+
+        public void AddToCache(IntVec3 loc, ThingDef plantDef)
+        {
+            TKS_Gardens.DebugMessage("caching " + plantDef.defName + " for "+loc.ToString());
+
+            int cellIndex = CellIndicesUtility.CellToIndex(loc, this.map.Size.x);
+
+            this.plantCache[cellIndex] = plantDef.defName;
+
+        }
+
+        public ThingDef GetFromCache(IntVec3 loc)
+        {
+            int cellIndex = CellIndicesUtility.CellToIndex(loc, this.map.Size.x);
+
+            if (this.plantCache.ContainsKey(cellIndex))
+            {
+                return ThingDef.Named(this.plantCache[cellIndex]);
+            }
+
+            return null;
+        }
+
+        public void ClearFromCache(IntVec3 loc)
+        {
+            int cellIndex = CellIndicesUtility.CellToIndex(loc, this.map.Size.x);
+
+            if (this.plantCache.ContainsKey(cellIndex))
+            {
+                this.plantCache.Remove(cellIndex);
+            }
+        }
+    }
+
+    public class TKS_Gardens : Mod
+    {
+        TKS_GardensSettings settings;
+
+        public static void DebugMessage(string message)
+        {
+            if (LoadedModManager.GetMod<TKS_Gardens>().GetSettings<TKS_GardensSettings>().debugPrint)
+            {
+                Log.Message(message);
+            }
+        }
+
+        public TKS_Gardens(ModContentPack content) : base(content)
+        {
+            this.settings = GetSettings<TKS_GardensSettings>();
+        }
+
+        private string editBufferFloat;
+
+        public override void DoSettingsWindowContents(Rect inRect)
+        {
+            Listing_Standard listingStandard = new Listing_Standard();
+            listingStandard.Begin(inRect);
+
+            listingStandard.CheckboxLabeled("TKS_AllowAllPlants".Translate(), ref settings.allowAllPlants);
+
+            listingStandard.CheckboxLabeled("TKSDebugPrint".Translate(), ref settings.debugPrint);
+            listingStandard.End();
+            base.DoSettingsWindowContents(inRect);
+        }
+
+        public override string SettingsCategory()
+        {
+            return "TKSGardensSettings".Translate();
+        }
+        /*
+        public static List<ThingDef> GetGardenPlants(Map map)
+        {
+            List<ThingDef> gardenPlants = new List<ThingDef>();
+
+            bool allowAllPlants = LoadedModManager.GetMod<TKS_Gardens>().GetSettings<TKS_GardensSettings>().allowAllPlants;
+
+            foreach (ThingDef thingDef in map.Biome.AllWildPlants)
+            {
+                gardenPlants.Add(thingDef);
+            }
+            return gardenPlants;
+        }
+        */
+    }
+
+    public class Designator_ZoneAdd_Garden : Designator_ZoneAdd_Growing
+    {
+        protected override string NewZoneLabel
+        {
+            get
+            {
+                return "GardenZone".Translate();
+            }
+        }
+        public Designator_ZoneAdd_Garden()
+        {
+            this.zoneTypeToPlace = typeof(Zone_Garden);
+            this.defaultLabel = "GardenZone".Translate();
+            this.defaultDesc = "DesignatorGardenZoneDesc".Translate();
+            this.icon = Symbols.symbolGardens;
+            //this.tutorTag = "ZoneAdd_Growing";
+            //this.hotKey = KeyBindingDefOf.Misc2;
+        }
+
+        protected override Zone MakeNewZone()
+        {
+            //PlayerKnowledgeDatabase.KnowledgeDemonstrated(ConceptDefOf.GrowingFood, KnowledgeAmount.Total);
+            return new Zone_Garden(Find.CurrentMap.zoneManager);
+        }
+    }
+
     public class Zone_Garden : Zone , IPlantToGrowSettable
     {
         public override bool IsMultiselectable
@@ -79,6 +280,11 @@ namespace TKS_Gardens
             Scribe_Values.Look<bool>(ref this.allowCut, "allowCut", true, false);
         }
 
+        public List<ThingDef> availablePlants()
+        {
+            return this.Map.GetComponent<TKS_GardensMapComponent>().plantablePlants;
+        }
+        
         public ThingDef GetPlantDefToGrow()
         {
             //pick random plant from filter
@@ -91,28 +297,40 @@ namespace TKS_Gardens
             
             ThingDef plantDefToPlant = allowedPlants.RandomElement();
 
-            //Log.Message("Returning " + plantDefToPlant.defName + " as plantToGrow");
+            TKS_Gardens.DebugMessage("Returning " + plantDefToPlant.defName + " as plantToGrow");
             return plantDefToPlant;
         }
-
+        
         public ThingDef GetPlantDefToGrow(IntVec3 loc, Map map)
         {
-            //check if there's already a plant here that fits the filter
-            Plant plantThere = loc.GetPlant(map);
+            //check the cache
+            TKS_GardensMapComponent component = map.GetComponent<TKS_GardensMapComponent>();
 
-            if (plantThere!=null)
+            IEnumerable<ThingDef> allowedPlants = PlantFilter.AllowedThingDefs;
+
+            ThingDef cachedDef = component.GetFromCache(loc);
+
+            if (cachedDef != null)
             {
-                if (PlantFilter.Allows(plantThere)) {
-                    //Log.Message("returning def " + plantThere.def + " because it already fits the filter");
-                    return plantThere.def;
+                //check that it's still allowed
+                if (allowedPlants.Contains(cachedDef))
+                {
+                    //TKS_Gardens.DebugMessage("returning cached def "+cachedDef.defName+" for "+loc.ToString());
+                    return cachedDef; 
+
                 } else
                 {
-                    //Log.Warning("already a plant at "+loc.ToString()+", but it doesn't fit the filter");
+                    TKS_Gardens.DebugMessage("Cache contains plant no longer allowed, regenerating");
                 }
             }
 
             //otherwise pick a plant def to return
-            return GetPlantDefToGrow();
+           ThingDef plantToGrow = GetPlantDefToGrow();
+
+            //cache it
+            component.AddToCache(loc, plantToGrow);
+
+            return plantToGrow;
 
         }
 
@@ -138,23 +356,25 @@ namespace TKS_Gardens
         {
             get
             {
+
                 if (this.plantFilter == null)
                 {
                     this.plantFilter = new ThingFilter();
 
-                    object plantCategory = null;
+                    //object plantCategory = null;
 
                     foreach (ThingDef thingDef in this.Map.Biome.AllWildPlants)
                     {
                         if (thingDef.plant.Sowable)
                         {
+                            TKS_Gardens.DebugMessage(this.ToString()+" allowing " + thingDef);
                             this.plantFilter.SetAllow(thingDef, true);
-                            plantCategory = thingDef.category;
+                            //plantCategory = thingDef.category;
 
                         }
                     }
 
-                    this.plantFilter.DisplayRootCategory = new TreeNode_ThingCategory(ThingCategoryDefOf.Plants);
+                    //this.plantFilter.DisplayRootCategory = new TreeNode_ThingCategory(ThingCategoryDefOf.Plants);
                 }
                 return this.plantFilter;
             }
@@ -162,7 +382,7 @@ namespace TKS_Gardens
 
         public override IEnumerable<Gizmo> GetZoneAddGizmos()
         {
-            yield return DesignatorUtility.FindAllowedDesignator<TKS_Gardens.Designator_ZoneAdd_Garden>();
+            yield return DesignatorUtility.FindAllowedDesignator<Designator_ZoneAdd_Garden>();
             yield break;
         }
 
@@ -172,7 +392,7 @@ namespace TKS_Gardens
             {
                 yield return gizmo;
             }
-            IEnumerator<Gizmo> enumerator = null;
+            //IEnumerator<Gizmo> enumerator = null;
 
             yield return new Command_Toggle
             {
@@ -226,7 +446,6 @@ namespace TKS_Gardens
             yield return command_Action;
 
             yield break;
-            yield break;
         }
 
         public override IEnumerable<InspectTabBase> GetInspectTabs()
@@ -240,7 +459,7 @@ namespace TKS_Gardens
 
         private ThingFilter plantFilter;
 
-        private List<ThingDef> plantList;
+        //private List<ThingDef> plantList;
 
         private static readonly ITab[] ITabs = new ITab[]
         {
@@ -284,14 +503,14 @@ namespace TKS_Gardens
         {
             get
             {
-                return (float)(20);
+                return (float)(40);
             }
         }
 
         public ITab_Garden()
         {
             this.size = ITab_Garden.WinSize;
-            this.labelKey = "TabPlants";
+            this.labelKey = "TKSTabPlants";
             //this.tutorTag = "Plants";
         }
 
@@ -300,7 +519,7 @@ namespace TKS_Gardens
             Rect rect = new Rect(0f, 0f, ITab_Garden.WinSize.x, ITab_Garden.WinSize.y).ContractedBy(10f);
             Widgets.BeginGroup(rect);
 
-            this.DrawPlantFilter(0f, rect.width, rect.height, gardenZone);
+            this.DrawPlantFilter(0f, rect.width, rect.height-20.0f, gardenZone);
             Widgets.EndGroup();
         }
 
@@ -315,11 +534,21 @@ namespace TKS_Gardens
             Map map = gardenZone.Map;
 
             ThingFilter parentFilter = new ThingFilter();
-            parentFilter.SetAllow(ThingCategoryDefOf.Plants, true);
+            //parentFilter.SetAllow(ThingCategoryDefOf.Plants, true, null, exceptedFilters());
+            foreach(ThingDef def in gardenZone.availablePlants())
+            {
+                parentFilter.SetAllow(def, true);
+            }
             parentFilter.allowedQualitiesConfigurable = false;
             parentFilter.allowedHitPointsConfigurable = false;
 
             ThingFilterUI.DoThingFilterConfigWindow(rect, state, plantFilter, parentFilter, openMask, forceHiddenDefs, this.HiddenSpecialThingFilters(), true, null, map);
+        }
+
+        private IEnumerable<SpecialThingFilterDef> exceptedFilters()
+        {
+            //yield return SpecialThingFilterDefOf.TKS_GardenPlants;
+            yield break;
         }
 
 
@@ -337,7 +566,7 @@ namespace TKS_Gardens
 
         private IEnumerable<SpecialThingFilterDef> HiddenSpecialThingFilters()
         {
-            //yield return TKS_Gardens.SpecialThingFilterDefOf.NonEdiblePlants;
+            //yield return SpecialThingFilterDefOf.TKS_GardenPlants;
             yield break;
         }
 
@@ -360,30 +589,68 @@ namespace TKS_Gardens
         }
     }
 
-
-    public class Designator_ZoneAdd_Garden : Designator_ZoneAdd_Growing
+    [HarmonyPatch(typeof(WorkGiver_PlantsCut))]
+    static class WorkGiver_PlantsCut_Patches
     {
-        protected override string NewZoneLabel
+        [HarmonyPatch(typeof(WorkGiver_PlantsCut), "JobOnThing")]
+        [HarmonyPostfix]
+        public static void JobOnThing_Postfix(Pawn pawn, Thing t, bool forced, ref Job __result)
         {
-            get
+            if (__result != null)
             {
-                return "GardenZone".Translate();
+                LocalTargetInfo cutTarget = __result.targetA;
+
+                IntVec3 cell = cutTarget.Cell;
+
+                Zone_Garden gardenZone = GridsUtility.GetZone(cell, pawn.Map) as Zone_Garden;
+                if (gardenZone != null)
+                {
+                    foreach (Designation designation in pawn.Map.designationManager.designationsByDef[DesignationDefOf.CutPlant])
+                    {
+                        if (designation.target==cutTarget)
+                        {
+                            TKS_Gardens.DebugMessage("clearing cached plant for "+(IntVec3)cutTarget+" due to player-designated cut");
+                            TKS_GardensMapComponent component = pawn.Map.GetComponent<TKS_GardensMapComponent>();
+                            component.ClearFromCache((IntVec3)cutTarget);
+                        }
+                    }
+                }
+
             }
         }
-        public Designator_ZoneAdd_Garden()
+
+    }
+
+    [HarmonyPatch(typeof(PlantUtility))]
+    static class PlantUtility_Patches
+    {
+        [HarmonyPatch(typeof(PlantUtility), "AdjacentSowBlocker")]
+        [HarmonyPostfix]
+        public static void AdjacentSowBlocker_Postfix(ThingDef plantDef, IntVec3 c, Map map, ref Thing __result)
         {
-            this.zoneTypeToPlace = typeof(Zone_Garden);
-            this.defaultLabel = "GardenZone".Translate();
-            this.defaultDesc = "DesignatorGardenZoneDesc".Translate();
-            this.icon = TKS_Gardens.Symbols.symbolGardens;
-            //this.tutorTag = "ZoneAdd_Growing";
-            //this.hotKey = KeyBindingDefOf.Misc2;
+
+            //TKS_Gardens.DebugMessage("running adjacent sow blocker postfix");
+            //ignore if on a garden zone
+            Zone_Garden gardenZone = GridsUtility.GetZone(c, map) as Zone_Garden;
+
+            if (gardenZone != null)
+            {
+                //TKS_Gardens.DebugMessage("ignoring adjacent sow blocker due to garden zone");
+                __result = null;
+            }
         }
 
-        protected override Zone MakeNewZone()
+        [HarmonyPatch(typeof(PlantUtility), "CanNowPlantAt")]
+        [HarmonyPostfix]
+        public static void CanNowPlantAt_Postfix(ThingDef plantDef, IntVec3 c, Map map, bool canWipePlantsExceptTree, ref bool __result)
         {
-            //PlayerKnowledgeDatabase.KnowledgeDemonstrated(ConceptDefOf.GrowingFood, KnowledgeAmount.Total);
-            return new Zone_Garden(Find.CurrentMap.zoneManager);
+            Zone_Garden gardenZone = GridsUtility.GetZone(c, map) as Zone_Garden;
+
+            if (gardenZone != null)
+            {
+                //TKS_Gardens.DebugMessage("allow planting now due to garden zone");
+                __result = true;
+            }
         }
     }
 
@@ -394,17 +661,17 @@ namespace TKS_Gardens
         [HarmonyPrefix]
         public static bool CalculateWantedPlantDef_Prefix(IntVec3 c, Map map, ref ThingDef __result)
         {
-            //Log.Message("running calculate wanted plant def prefix");
+            //TKS_Gardens.DebugMessage("running calculate wanted plant def prefix");
 
             //check if it's a garden zone
             Zone_Garden gardenZone = GridsUtility.GetZone(c, map) as Zone_Garden;
 
             if (gardenZone != null)
             {
-                //Log.Message("calculating wanted plant def for Garden Zone");
+                //TKS_Gardens.DebugMessage("calculating wanted plant def for Garden Zone");
 
                 __result = gardenZone.GetPlantDefToGrow(c, map);
-                //Log.Message("returning " + __result.defName);
+                //TKS_Gardens.DebugMessage("returning " + __result.defName);
                 return false;
             }
 
@@ -415,76 +682,90 @@ namespace TKS_Gardens
         [HarmonyPrefix]
         public static bool JobOnCell_Prefix(WorkGiver_GrowerSow __instance, Pawn pawn, IntVec3 c, ref Job __result, bool forced = false)
         {
+
             Map map = pawn.Map;
-            if (c.IsForbidden(pawn))
-            {
-                __result = null;
-                return false;
-            }
-
-            //check for terrian that cannot be planted
-            float num = ThingDefOf.Plant_Potato.plant.fertilityMin;
-            if (map.fertilityGrid.FertilityAt(c) < num)
-            {
-                __result = null;
-                return false;
-            }
-
 
             //check if it's a garden zone
             Zone_Garden gardenZone = GridsUtility.GetZone(c, map) as Zone_Garden;
 
-            if (gardenZone != null)
+            if (gardenZone == null)
             {
-                //break out early if disabled sow
-                if (!gardenZone.allowSow)
+                //run original method instead
+                return true;
+            }
+
+            if (c.IsForbidden(pawn) || !gardenZone.allowSow)
+            {
+                __result = null;
+                return false;
+            }
+
+            Plant plant = c.GetPlant(map);
+            if (plant != null)
+            {
+                if (gardenZone.PlantFilter.Allows(plant.def))
                 {
                     __result = null;
                     return false;
                 }
-
-                //Log.Message("running JobOnCell for Garden Zone");
-                List<Thing> thingList = c.GetThingList(map);
-                for (int i = 0; i < thingList.Count; i++)
+                else if (gardenZone.allowCut && PlantUtility.PawnWillingToCutPlant_Job(plant, pawn) && pawn.CanReserveAndReach(plant, PathEndMode.Touch, Danger.Deadly, 1, -1, null, forced))
                 {
-                    Thing thing = thingList[i];
-                    if (gardenZone.PlantFilter.Allows(thing.def))
-                    {
-                        __result = null;
-                        return false;
-                    } 
+                    TKS_Gardens.DebugMessage("creating job for garden zone to cut current plant at " + c.ToString());
+                    __result = JobMaker.MakeJob(JobDefOf.CutPlant, plant);
+                    return false;
                 }
+            }
 
-                Plant plant = c.GetPlant(map);
-                if (plant != null)
+            ThingDef wantedPlantDef = gardenZone.GetPlantDefToGrow(c, map);
+
+            //check for terrian that cannot be planted
+            float num = wantedPlantDef.plant.fertilityMin;
+            if (map.fertilityGrid.FertilityAt(c) < num)
+            {
+                JobFailReason.Is("UnderRequiredFertility".Translate(wantedPlantDef.plant.fertilityMin), __instance.def.label);
+                __result = null;
+                return false;
+            }
+
+            if (wantedPlantDef.plant.sowMinSkill > 0 && pawn.skills != null && pawn.skills.GetSkill(SkillDefOf.Plants).Level < wantedPlantDef.plant.sowMinSkill)
+            {
+                JobFailReason.Is("UnderAllowedSkill".Translate(wantedPlantDef.plant.sowMinSkill), __instance.def.label);
+                __result = null;
+                return false;
+            }
+
+            Thing thing2 = PlantUtility.AdjacentSowBlocker(wantedPlantDef, c, map);
+            if (thing2 != null)
+            {
+                Plant plant2 = thing2 as Plant;
+                if (plant2 != null)
                 {
-                    if (gardenZone.PlantFilter.Allows(plant.def))
+                    //dont cut blocking plants in garden zone
+                    bool cutIt = true;
+                    
+                    Zone otherZone = thing2.Position.GetZone(map);
+                    if (otherZone != null && (otherZone is Zone_Garden || otherZone is Zone_Growing))
                     {
-                        __result = null;
-                        return false;
-                    } else if (gardenZone.allowCut && PlantUtility.PawnWillingToCutPlant_Job(plant, pawn) && pawn.CanReserveAndReach(plant, PathEndMode.Touch, Danger.Deadly, 1, -1, null, forced))
-                    {
-                        //Log.Message("creating job for garden zone to cut current plant at " + c.ToString());
-                        __result = JobMaker.MakeJob(JobDefOf.CutPlant, plant);
-                        return false;
+                        Zone_Garden otherGardenZone = (Zone_Garden)otherZone;
+                        if (otherGardenZone != null)
+                        {
+                            if (otherGardenZone.GetPlantDefToGrow(thing2.Position, map) == thing2.def)
+                            {
+                                cutIt = false;
+                            }
+                        } else
+                        {
+                            Zone_Growing otherGrowingZone = (Zone_Growing)otherZone;
+                            if (otherGrowingZone.GetPlantDefToGrow() == thing2.def)
+                            {
+                                cutIt = false;
+                            }
+                        }
                     }
-                }
-    
-                ThingDef wantedPlantDef = gardenZone.GetPlantDefToGrow();
 
-                if (wantedPlantDef.plant.sowMinSkill > 0 && pawn.skills != null && pawn.skills.GetSkill(SkillDefOf.Plants).Level < wantedPlantDef.plant.sowMinSkill)
-                {
-                    JobFailReason.Is("UnderAllowedSkill".Translate(wantedPlantDef.plant.sowMinSkill), __instance.def.label);
-                    __result = null;
-                    return false;
-                }
+                    if (cutIt && pawn.CanReserveAndReach(plant2, PathEndMode.Touch, Danger.Deadly, 1, -1, null, forced) && !plant2.IsForbidden(pawn))
+                    { 
 
-                Thing thing2 = PlantUtility.AdjacentSowBlocker(wantedPlantDef, c, map);
-                if (thing2 != null)
-                {
-                    Plant plant2 = thing2 as Plant;
-                    if (plant2 != null && pawn.CanReserveAndReach(plant2, PathEndMode.Touch, Danger.Deadly, 1, -1, null, forced) && !plant2.IsForbidden(pawn))
-                    {
                         IPlantToGrowSettable plantToGrowSettable = plant2.Position.GetPlantToGrowSettable(plant2.Map);
                         if (plantToGrowSettable == null || plantToGrowSettable.GetPlantDefToGrow() != plant2.def)
                         {
@@ -497,85 +778,93 @@ namespace TKS_Gardens
                             }
                             if (!PlantUtility.PawnWillingToCutPlant_Job(plant2, pawn))
                             {
+                                JobFailReason.Is("RefusesPlantCut".Translate(plant2.def.defName, pawn.Name), __instance.def.label);
                                 __result = null;
                                 return false;
                             }
-                            //Log.Message("creating job for garden zone to cut adjacent plant to make room for " + wantedPlantDef.ToString() + " at " + c.ToString());
+
+                            TKS_Gardens.DebugMessage("creating job for garden zone to cut adjacent plant to make room for " + wantedPlantDef.ToString() + " at " + c.ToString());
                             __result = JobMaker.MakeJob(JobDefOf.CutPlant, plant2);
                             return false;
                         }
                     }
-                    __result = null;
-                    return false;
-                }
-
-                int j = 0;
-                while (j < thingList.Count)
-                {
-                    Thing thing3 = thingList[j];
-                    if (thing3.def.BlocksPlanting(false))
+                    if (cutIt)
                     {
-                        if (!pawn.CanReserve(thing3, 1, -1, null, forced))
+                        __result = null;
+                        return false;
+                    }
+                }
+            }
+
+            List<Thing> thingList = c.GetThingList(map);
+
+            int j = 0;
+            while (j < thingList.Count)
+            {
+                Thing thing3 = thingList[j];
+                if (thing3.def.BlocksPlanting(false))
+                {
+                    if (!pawn.CanReserve(thing3, 1, -1, null, forced))
+                    {
+                        __result = null;
+                        return false;
+                    }
+                    if (thing3.def.category == ThingCategory.Plant)
+                    {
+                        if (thing3.IsForbidden(pawn))
                         {
                             __result = null;
                             return false;
                         }
-                        if (thing3.def.category == ThingCategory.Plant)
+                        if (gardenZone.allowCut)
                         {
-                            if (thing3.IsForbidden(pawn))
-                            {
-                                __result = null;
-                                return false;
-                            }
-                            if (gardenZone.allowCut)
-                            {
-                                __result = null;
-                                return false;
-                            }
-                            if (!PlantUtility.PawnWillingToCutPlant_Job(thing3, pawn))
-                            {
-                                __result = null;
-                                return false;
-                            }
-                            //Log.Message("creating job for garden zone to cut current plant to make room for " + wantedPlantDef.ToString() + " at " + c.ToString());
-                            __result = JobMaker.MakeJob(JobDefOf.CutPlant, thing3);
-                            return false;
-                        }
-                        else
-                        {
-                            if (thing3.def.EverHaulable)
-                            {
-                                //Log.Message("creating job for garden zone to haul aside for " + wantedPlantDef.ToString() + " at " + c.ToString());
-                                __result = HaulAIUtility.HaulAsideJobFor(pawn, thing3);
-                                return false;
-                            }
                             __result = null;
                             return false;
                         }
+                        if (!PlantUtility.PawnWillingToCutPlant_Job(thing3, pawn))
+                        {
+                            JobFailReason.Is("RefusesPlantCut".Translate(thing3.def.defName, pawn.Name), __instance.def.label);
+                            __result = null;
+                            return false;
+                        }
+                        TKS_Gardens.DebugMessage("creating job for garden zone to cut current plant to make room for " + wantedPlantDef.ToString() + " at " + c.ToString());
+                        __result = JobMaker.MakeJob(JobDefOf.CutPlant, thing3);
+                        return false;
                     }
                     else
                     {
-                        j++;
+                        if (thing3.def.EverHaulable)
+                        {
+                            TKS_Gardens.DebugMessage("creating job for garden zone to haul aside for " + wantedPlantDef.ToString() + " at " + c.ToString());
+                            __result = HaulAIUtility.HaulAsideJobFor(pawn, thing3);
+                            return false;
+                        }
+
+                        JobFailReason.Is("CannotMoveThing".Translate(thing3.def.defName), __instance.def.label);
+                        __result = null;
+                        return false;
                     }
                 }
-
-                if (!pawn.CanReserve(c, 1, -1, null, forced) || !gardenZone.allowSow)
+                else
                 {
-                    __result = null;
-                    return false;
+                    j++;
                 }
+            }
 
-                //Log.Message("creating job for garden zone to plant " + wantedPlantDef.ToString() + " at " + c.ToString());
-
-                Job job = JobMaker.MakeJob(JobDefOf.Sow, c);
-                job.plantDefToSow = wantedPlantDef;
-
-                //Log.Message("returning job for garden zone: " + job.ToString());
-                __result = job;
+            if (!pawn.CanReserve(c, 1, -1, null, forced) || !gardenZone.allowSow)
+            {
+                __result = null;
                 return false;
             }
-            
-            return true;
+
+            TKS_Gardens.DebugMessage("creating job for garden zone to plant " + wantedPlantDef.ToString() + " at " + c.ToString());
+
+            Job job = JobMaker.MakeJob(JobDefOf.Sow, c);
+            job.plantDefToSow = wantedPlantDef;
+
+            //TKS_Gardens.DebugMessage("returning job for garden zone: " + job.ToString());
+            __result = job;
+            return false;
         }
 
         [HarmonyPatch(typeof(WorkGiver_Grower), "PotentialWorkCellsGlobal")]
@@ -587,7 +876,7 @@ namespace TKS_Gardens
                 yield return value;
             }
 
-            //Log.Message("checking for garden zones to plant");
+            TKS_Gardens.DebugMessage("checking for garden zones to plant");
             Danger maxDanger = pawn.NormalMaxDanger();
 
             //cannot access this private field from IEnumerable postfix
@@ -616,18 +905,21 @@ namespace TKS_Gardens
 
                         if (gardenCells.Count>0)
                         {
-                           //Log.Message("returning " + gardenCells.Count.ToString() + " garden cells for planting");
+                           //TKS_Gardens.DebugMessage("returning " + gardenCells.Count.ToString() + " garden cells for planting");
                             foreach (var value in gardenCells)
                             {
                                 //wantedPlantDefField.SetValue(__instance, null);
-                                yield return value;
+                                Building edifice = value.GetFirstBuilding(pawn.Map);
+                                if (edifice == null || !edifice.def.BlocksPlanting(false))
+                                {
+                                    yield return value;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            yield break;
             yield break;
         }
     }
