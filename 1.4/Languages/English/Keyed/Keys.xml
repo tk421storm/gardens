@@ -8,6 +8,8 @@
 	<UnderRequiredFertility>soil under required fertility {0}</UnderRequiredFertility>
 	<RefusesPlantCut>adjacent plant {0} requires cut to sow, but {1} will not plant cut</RefusesPlantCut>
 	<CannotMoveThing>cannot move obstructing thing {0}</CannotMoveThing>
+	<SnowPreventsPlanting>cannot plant in snow</SnowPreventsPlanting>
+	<NotGrowingSeason>not currently growing season in this biome</NotGrowingSeason>
 	<TKS_AllowAllPlants>Check this box to allow all plants to be sown (including immersion breaking plants such as anima grass et al)</TKS_AllowAllPlants>
 	<TKSGardensSettings>Gardens</TKSGardensSettings>
 </LanguageData>

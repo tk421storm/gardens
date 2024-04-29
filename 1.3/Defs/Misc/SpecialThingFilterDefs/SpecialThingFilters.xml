@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<SpecialThingFilterDef>
+		<defName>TKS_GardenPlants</defName>
+		<label>plants suitable for garden planting</label>
+		<description>Plants that can be planted in a garden.</description>
+		<parentCategory>Root</parentCategory>
+		<allowedByDefault>true</allowedByDefault>
+		<saveKey>gardenPlants</saveKey>
+		<workerClass>TKS_Gardens.SpecialThingFilterWorker_GardenPlants</workerClass>
+	</SpecialThingFilterDef>
+</Defs>

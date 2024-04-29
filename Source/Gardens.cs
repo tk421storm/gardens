@@ -155,7 +155,7 @@ namespace TKS_Gardens
             if (this.plantCache.ContainsKey(cellIndex))
             {
                 ThingDef cachedPlant = ThingDef.Named(this.plantCache[cellIndex]);
-                TKS_Gardens.DebugMessage("returning cached plantDef " + cachedPlant.defName + " for " + loc.ToString());
+               //TKS_Gardens.DebugMessage("returning cached plantDef " + cachedPlant.defName + " for " + loc.ToString());
                 return cachedPlant;
             }
 
@@ -318,7 +318,7 @@ namespace TKS_Gardens
                 //check that it's still allowed
                 if (allowedPlants.Contains(cachedDef))
                 {
-                    TKS_Gardens.DebugMessage("returning cached def "+cachedDef.defName+" for "+loc.ToString());
+                    //TKS_Gardens.DebugMessage("returning cached def "+cachedDef.defName+" for "+loc.ToString());
                     return cachedDef; 
 
                 } else
@@ -678,7 +678,24 @@ namespace TKS_Gardens
         }
     }
 
-    [HarmonyPatch(typeof(WorkGiver_Grower))]
+    [HarmonyPatch(typeof(HaulAIUtility))]
+    static class HaulAIUtility_Patches
+    {
+        [HarmonyPatch(typeof(HaulAIUtility), "HaulablePlaceValidator")]
+        [HarmonyPrefix]
+        public static bool HaulablePlaceValidator_Prefix(Thing haulable, Pawn worker, IntVec3 c, ref bool __result)
+        {
+            if (haulable != null && haulable.def.BlocksPlanting(false) && worker.Map.zoneManager.ZoneAt(c) is Zone_Garden)
+            {
+                __result = false;
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+        [HarmonyPatch(typeof(WorkGiver_Grower))]
     static class WorkGiver_Grower_Patches
     {
         [HarmonyPatch(typeof(WorkGiver_Grower), "CalculateWantedPlantDef")]
@@ -765,7 +782,7 @@ namespace TKS_Gardens
                     AllowCut = zone_garden.allowCut;
                 } else
                 {
-                    AllowsPlant = zone_growing.PlantDefToGrow == plant.def;
+                    AllowsPlant = zone_growing.GetPlantDefToGrow() == plant.def;
                     AllowCut = zone_growing.allowCut;
                 }
                 if (AllowsPlant)
@@ -847,6 +864,9 @@ namespace TKS_Gardens
 
             Map map = pawn.Map;
 
+            //handle non-zone plantings somewhere else
+            if (GridsUtility.GetZone(c, map) == null) { return true; }
+
             //check if it's a garden zone
             Zone_Garden gardenZone = GridsUtility.GetZone(c, map) as Zone_Garden;
 
@@ -869,7 +889,11 @@ namespace TKS_Gardens
 
                 if (adjacentGardenZone == null)
                 {
+                    Zone_Growing growingZone = GridsUtility.GetZone(c, map) as Zone_Growing;
+                    Traverse.Create(__instance).Field("wantedPlantDef").SetValue(growingZone.GetPlantDefToGrow());
+
                     //run original method instead
+                    TKS_Gardens.DebugMessage(pawn.Name + " running original JobOnCell for " + c);
                     return true;
                 }
             }
@@ -911,6 +935,24 @@ namespace TKS_Gardens
                 return false;
             }
 
+            //check for snow (seems like planting in snow is a-ok)
+            /*
+            if (!PlantUtility.SnowAllowsPlanting(c, map))
+            {
+                JobFailReason.Is("SnowPreventsPlanting".Translate(), __instance.def.label);
+                __result = null;
+                return false;
+            }
+            */
+
+            //check for growing season
+            if (!PlantUtility.GrowthSeasonNow(c, map, true))
+            {
+                JobFailReason.Is("NotGrowingSeason".Translate(), __instance.def.label);
+                __result = null;
+                return false;
+            }
+
             //check for adjacent sow blocker
             Job adjacentSowCut = AdjacentSowBlocker(wantedPlantDef, c, map, currentZone, pawn, forced);
             if (adjacentSowCut != null)
@@ -925,6 +967,11 @@ namespace TKS_Gardens
             while (j < thingList.Count)
             {
                 Thing thing3 = thingList[j];
+                if (thing3.def == wantedPlantDef)
+                {
+                    __result = null;
+                    return false;
+                }
                 if (thing3.def.BlocksPlanting(false))
                 {
                     
