@@ -83,7 +83,7 @@ namespace TKS_Gardens
 
         public TKS_GardensMapComponent(Map map) : base(map)
         {
-            this.map = map;
+            //this.map = map;
 
         }
 
@@ -208,20 +208,38 @@ namespace TKS_Gardens
         {
             return "TKSGardensSettings".Translate();
         }
-        /*
-        public static List<ThingDef> GetGardenPlants(Map map)
+        
+        public class Command_Hide_ZoneGarden : Command_Hide
         {
-            List<ThingDef> gardenPlants = new List<ThingDef>();
-
-            bool allowAllPlants = LoadedModManager.GetMod<TKS_Gardens>().GetSettings<TKS_GardensSettings>().allowAllPlants;
-
-            foreach (ThingDef thingDef in map.Biome.AllWildPlants)
+            public Command_Hide_ZoneGarden(IHideable hideable) : base(hideable)
             {
-                gardenPlants.Add(thingDef);
             }
-            return gardenPlants;
+            protected override IEnumerable<FloatMenuOption> GetOptions()
+            {
+                return Command_Hide_ZoneGarden.GetHideOptions();
+            }
+
+            public static IEnumerable<FloatMenuOption> GetHideOptions()
+            {
+                yield return new FloatMenuOption("ShowAllZones".Translate(), delegate ()
+                {
+                    Command_Hide.ToggleAll(false);
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0);
+                yield return new FloatMenuOption("HideAllZones".Translate(), delegate ()
+                {
+                    Command_Hide.ToggleAll(true);
+                }, MenuOptionPriority.Default, null, null, 0f, null, null, true, 0);
+                foreach (FloatMenuOption floatMenuOption in Command_Hide.ZoneTypeOptions<Zone_Garden>("GardenGroup".Translate(), Symbols.symbolGardens))
+                {
+                    yield return floatMenuOption;
+                }
+                IEnumerator<FloatMenuOption> enumerator = null;
+                yield break;
+                yield break;
+            }
+
         }
-        */
+
     }
 
     public class Designator_ZoneAdd_Garden : Designator_ZoneAdd_Growing
@@ -391,6 +409,7 @@ namespace TKS_Gardens
 
         public override IEnumerable<Gizmo> GetGizmos()
         {
+            yield return new TKS_Gardens.Command_Hide_ZoneGarden(this);
             foreach (Gizmo gizmo in base.GetGizmos())
             {
                 yield return gizmo;
@@ -936,17 +955,21 @@ namespace TKS_Gardens
             }
 
             //check for snow (seems like planting in snow is a-ok)
-            /*
-            if (!PlantUtility.SnowAllowsPlanting(c, map))
-            {
-                JobFailReason.Is("SnowPreventsPlanting".Translate(), __instance.def.label);
-                __result = null;
-                return false;
-            }
-            */
+                /*
+                if (!PlantUtility.SnowAllowsPlanting(c, map))
+                {
+                    JobFailReason.Is("SnowPreventsPlanting".Translate(), __instance.def.label);
+                    __result = null;
+                    return false;
+                }
+                */
 
-            //check for growing season
+                //check for growing season
+#if v1_6
+            if (!PlantUtility.GrowthSeasonNow(c, map, wantedPlantDef))
+#else
             if (!PlantUtility.GrowthSeasonNow(c, map, true))
+#endif
             {
                 JobFailReason.Is("NotGrowingSeason".Translate(), __instance.def.label);
                 __result = null;
