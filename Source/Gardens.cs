@@ -1,14 +1,15 @@
 ﻿using HarmonyLib;
 using RimWorld;
-using UnityEngine;
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using UnityEngine;
 using Verse;
 using Verse.AI;
-using Verse.Sound;
 using Verse.Noise;
+using Verse.Sound;
+using static UnityEngine.UI.GridLayoutGroup;
 
 namespace TKS_Gardens
 {
@@ -140,6 +141,7 @@ namespace TKS_Gardens
 
         public void AddToCache(IntVec3 loc, ThingDef plantDef)
         {
+            if (plantDef == null) { return; }
             TKS_Gardens.DebugMessage("caching " + plantDef.defName + " for "+loc.ToString());
 
             int cellIndex = CellIndicesUtility.CellToIndex(loc, this.map.Size.x);
@@ -209,6 +211,7 @@ namespace TKS_Gardens
             return "TKSGardensSettings".Translate();
         }
         
+        //Command_Hide is new in 1.6, so older versions will need a different method
         public class Command_Hide_ZoneGarden : Command_Hide
         {
             public Command_Hide_ZoneGarden(IHideable hideable) : base(hideable)
@@ -714,7 +717,29 @@ namespace TKS_Gardens
         }
     }
 
-        [HarmonyPatch(typeof(WorkGiver_Grower))]
+
+    [HarmonyPatch(typeof(WorkGiver_GrowerHarvest))]
+    static class WorkGiver_GrowerHarvest_patches
+    {
+        [HarmonyPatch(typeof(WorkGiver_GrowerHarvest), "HasJobOnCell")]
+        [HarmonyPostfix]
+        public static void HasJobOnCell_Postfix(Pawn pawn, IntVec3 c, bool forced, ref bool __result)
+        {
+            if (__result)
+            {
+                Zone zone = pawn?.Map?.zoneManager.ZoneAt(c);
+                if (zone != null && zone is Zone_Garden)
+                {
+                    Zone_Garden garden = (Zone_Garden)zone;
+                    __result = garden.allowCut;
+                }
+            }
+
+        }
+    }
+
+
+    [HarmonyPatch(typeof(WorkGiver_Grower))]
     static class WorkGiver_Grower_Patches
     {
         [HarmonyPatch(typeof(WorkGiver_Grower), "CalculateWantedPlantDef")]
@@ -782,9 +807,10 @@ namespace TKS_Gardens
         }
 
         //step 1 - cut current plant (if any)
-        private static Job CutCurrentPlant(IntVec3 c, Map map, Zone currentZone, Pawn pawn, bool forced)
+        private static Job CutCurrentPlant(IntVec3 c, Map map, Zone currentZone, Pawn pawn, bool forced, out ThingDef currentPlant)
         {
             Job cutJob = null;
+            currentPlant = null;
 
             Zone_Growing zone_growing = currentZone as Zone_Growing;
             Zone_Garden zone_garden = currentZone as Zone_Garden;
@@ -792,6 +818,7 @@ namespace TKS_Gardens
             Plant plant = c.GetPlant(map);
             if (plant != null)
             {
+                currentPlant = plant.def;
                 bool AllowsPlant = false;
                 bool AllowCut = false;
 
@@ -860,7 +887,8 @@ namespace TKS_Gardens
 
                     if (cutIt && pawn.CanReserveAndReach(plant2, PathEndMode.Touch, Danger.Deadly, 1, -1, null, forced) && !plant2.IsForbidden(pawn))
                     {
-                        cutJob = CutCurrentPlant(plant2.Position, map, otherZone, pawn, forced);
+                        ThingDef currentPlantDef = null;
+                        cutJob = CutCurrentPlant(plant2.Position, map, otherZone, pawn, forced, out currentPlantDef);
 
                         if (cutJob != null)
                         {
@@ -922,6 +950,12 @@ namespace TKS_Gardens
 
             TKS_Gardens.DebugMessage(pawn.Name+" running patched JobOnCell for "+c+", zone "+currentZone.label);
 
+            if (c.GetVacuum(map) >= 0.5f)
+            {
+                __result = null;
+                return false;
+            }
+
             if (c.IsForbidden(pawn) || !AllowSow(currentZone))
             {
                 __result = null;
@@ -929,7 +963,8 @@ namespace TKS_Gardens
             }
 
             //check for cut plant
-            Job cutJob = CutCurrentPlant(c, map, currentZone, pawn, forced);
+            ThingDef currentPlantDef = null;
+            Job cutJob = CutCurrentPlant(c, map, currentZone, pawn, forced, out currentPlantDef);
             if (cutJob != null)
             {
                 __result = cutJob;
@@ -937,6 +972,16 @@ namespace TKS_Gardens
             }
 
             ThingDef wantedPlantDef = GetPlantDefToGrow(c, map, currentZone);
+            if (wantedPlantDef == null)
+            {
+                __result = null;
+                return false;
+            }
+
+            if (currentPlantDef==wantedPlantDef)
+            {
+                TKS_Gardens.DebugMessage("JobOnCell for " + c + ", zone " + currentZone.label+": plant is already "+wantedPlantDef.defName);
+            }
 
             //check for terrian that cannot be planted
             float num = wantedPlantDef.plant.fertilityMin;
