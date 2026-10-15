@@ -212,6 +212,7 @@ namespace TKS_Gardens
         }
         
         //Command_Hide is new in 1.6, so older versions will need a different method
+#if !(v1_4 || v1_5)
         public class Command_Hide_ZoneGarden : Command_Hide
         {
             public Command_Hide_ZoneGarden(IHideable hideable) : base(hideable)
@@ -242,6 +243,7 @@ namespace TKS_Gardens
             }
 
         }
+#endif
 
     }
 
@@ -412,7 +414,9 @@ namespace TKS_Gardens
 
         public override IEnumerable<Gizmo> GetGizmos()
         {
+#if !(v1_4 || v1_5)
             yield return new TKS_Gardens.Command_Hide_ZoneGarden(this);
+#endif
             foreach (Gizmo gizmo in base.GetGizmos())
             {
                 yield return gizmo;
@@ -950,11 +954,14 @@ namespace TKS_Gardens
 
             TKS_Gardens.DebugMessage(pawn.Name+" running patched JobOnCell for "+c+", zone "+currentZone.label);
 
+#if !(v1_4 || v1_5)
+            //vacuum is new in 1.6 (Odyssey)
             if (c.GetVacuum(map) >= 0.5f)
             {
                 __result = null;
                 return false;
             }
+#endif
 
             if (c.IsForbidden(pawn) || !AllowSow(currentZone))
             {
