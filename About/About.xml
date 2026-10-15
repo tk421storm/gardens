@@ -5,6 +5,7 @@
 	<author>tk421storm</author>
 	<packageId>tk421storm.Gardens</packageId>
 	<!-- a unique identifier for your mod. Must contain only a-z and periods, no spaces. -->
+	<url>https://github.com/tk421storm/gardens</url>
 	<supportedVersions>
 		<!-- the version(s) your mod supports -->
 		<li>1.3</li>
