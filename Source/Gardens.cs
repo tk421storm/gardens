@@ -1010,10 +1010,10 @@ namespace TKS_Gardens
                 */
 
                 //check for growing season
-#if v1_6
-            if (!PlantUtility.GrowthSeasonNow(c, map, wantedPlantDef))
-#else
+#if v1_4 || v1_5
             if (!PlantUtility.GrowthSeasonNow(c, map, true))
+#else
+            if (!PlantUtility.GrowthSeasonNow(c, map, wantedPlantDef))
 #endif
             {
                 JobFailReason.Is("NotGrowingSeason".Translate(), __instance.def.label);
