@@ -177,11 +177,15 @@ namespace TKS_Gardens
 
     public class TKS_Gardens : Mod
     {
-        TKS_GardensSettings settings;
+        static TKS_GardensSettings settings;
+
+        //check this before building a debug string on a hot path (growers check every garden cell), so the string is
+        //only built when it will be printed
+        public static bool DebugEnabled => settings != null && settings.debugPrint;
 
         public static void DebugMessage(string message)
         {
-            if (LoadedModManager.GetMod<TKS_Gardens>().GetSettings<TKS_GardensSettings>().debugPrint)
+            if (DebugEnabled)
             {
                 Log.Message(message);
             }
@@ -189,7 +193,7 @@ namespace TKS_Gardens
 
         public TKS_Gardens(ModContentPack content) : base(content)
         {
-            this.settings = GetSettings<TKS_GardensSettings>();
+            settings = GetSettings<TKS_GardensSettings>();
         }
 
         private string editBufferFloat;
@@ -872,10 +876,16 @@ namespace TKS_Gardens
                         {
                             ThingDef otherPlantDef = otherGardenZone.GetPlantDefToGrow(thing2.Position, map);
 
-                            TKS_Gardens.DebugMessage("querying if plant at " + thing2.Position + "( " + thing2.def.defName + ") is allowed in " + otherGardenZone.label);
+                            if (TKS_Gardens.DebugEnabled)
+                            {
+                                TKS_Gardens.DebugMessage("querying if plant at " + thing2.Position + "( " + thing2.def.defName + ") is allowed in " + otherGardenZone.label);
+                            }
                             if (otherPlantDef == thing2.def)
                             {
-                                TKS_Gardens.DebugMessage("not cutting " + otherPlantDef.defName + " at " + thing2.Position);
+                                if (TKS_Gardens.DebugEnabled)
+                                {
+                                    TKS_Gardens.DebugMessage("not cutting " + otherPlantDef.defName + " at " + thing2.Position);
+                                }
                                 cutIt = false;
                             }
                         }
@@ -944,7 +954,10 @@ namespace TKS_Gardens
                     Traverse.Create(__instance).Field("wantedPlantDef").SetValue(growingZone.GetPlantDefToGrow());
 
                     //run original method instead
-                    TKS_Gardens.DebugMessage(pawn.Name + " running original JobOnCell for " + c);
+                    if (TKS_Gardens.DebugEnabled)
+                    {
+                        TKS_Gardens.DebugMessage(pawn.Name + " running original JobOnCell for " + c);
+                    }
                     return true;
                 }
             }
@@ -952,7 +965,10 @@ namespace TKS_Gardens
             //we need to do all further operations either for a garden zone or for a growing zone
             Zone currentZone = GridsUtility.GetZone(c, map);
 
-            TKS_Gardens.DebugMessage(pawn.Name+" running patched JobOnCell for "+c+", zone "+currentZone.label);
+            if (TKS_Gardens.DebugEnabled)
+            {
+                TKS_Gardens.DebugMessage(pawn.Name+" running patched JobOnCell for "+c+", zone "+currentZone.label);
+            }
 
 #if !(v1_4 || v1_5)
             //vacuum is new in 1.6 (Odyssey)
@@ -987,7 +1003,10 @@ namespace TKS_Gardens
 
             if (currentPlantDef==wantedPlantDef)
             {
-                TKS_Gardens.DebugMessage("JobOnCell for " + c + ", zone " + currentZone.label+": plant is already "+wantedPlantDef.defName);
+                if (TKS_Gardens.DebugEnabled)
+                {
+                    TKS_Gardens.DebugMessage("JobOnCell for " + c + ", zone " + currentZone.label+": plant is already "+wantedPlantDef.defName);
+                }
             }
 
             //check for terrian that cannot be planted
