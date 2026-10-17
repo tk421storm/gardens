@@ -776,6 +776,10 @@ namespace TKS_Gardens
     [HarmonyPatch(typeof(WorkGiver_GrowerSow))]
     static class WorkGiver_GrowerSow_Patches {
 
+        //vanilla's protected static WorkGiver_Grower.wantedPlantDef (static in 1.5 and 1.6). Looked up once - JobOnCell sets
+        //it for every growing-zone cell, and a Traverse there did the reflection lookup each time
+        private static readonly System.Reflection.FieldInfo wantedPlantDefField = AccessTools.Field(typeof(WorkGiver_Grower), "wantedPlantDef");
+
         private static bool AllowSow(Zone currentZone)
         {
             bool allowSow = false;
@@ -951,7 +955,7 @@ namespace TKS_Gardens
                 if (adjacentGardenZone == null)
                 {
                     Zone_Growing growingZone = GridsUtility.GetZone(c, map) as Zone_Growing;
-                    Traverse.Create(__instance).Field("wantedPlantDef").SetValue(growingZone.GetPlantDefToGrow());
+                    wantedPlantDefField.SetValue(__instance, growingZone.GetPlantDefToGrow());
 
                     //run original method instead
                     if (TKS_Gardens.DebugEnabled)
@@ -1001,12 +1005,16 @@ namespace TKS_Gardens
                 return false;
             }
 
+            //the wanted plant is already growing here - nothing to do. Vanilla returns at this point too, before the fertility,
+            //skill and adjacent sow blocker checks (the thing list check below would return null for it anyway)
             if (currentPlantDef==wantedPlantDef)
             {
                 if (TKS_Gardens.DebugEnabled)
                 {
                     TKS_Gardens.DebugMessage("JobOnCell for " + c + ", zone " + currentZone.label+": plant is already "+wantedPlantDef.defName);
                 }
+                __result = null;
+                return false;
             }
 
             //check for terrian that cannot be planted
