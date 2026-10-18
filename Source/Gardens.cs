@@ -515,12 +515,15 @@ namespace TKS_Gardens
         {
             PlantSettingsClipboard.clipboard.CopyAllowancesFrom(s);
             PlantSettingsClipboard.copied = true;
+            //confirm it like vanilla's storage settings clipboard does (not kept in the message history)
+            Messages.Message("TKSGardenSettingsCopiedToClipboard".Translate(), null, MessageTypeDefOf.NeutralEvent, historical: false);
         }
 
         // Token: 0x06006614 RID: 26132 RVA: 0x0022CE0C File Offset: 0x0022B00C
         public static void PasteInto(ThingFilter s)
         {
             s.CopyAllowancesFrom(PlantSettingsClipboard.clipboard);
+            Messages.Message("TKSGardenSettingsPastedFromClipboard".Translate(), null, MessageTypeDefOf.NeutralEvent, historical: false);
         }
 
         // Token: 0x04003998 RID: 14744

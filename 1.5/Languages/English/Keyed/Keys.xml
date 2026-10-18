@@ -13,4 +13,6 @@
 	<NotGrowingSeason>not currently growing season in this biome</NotGrowingSeason>
 	<TKS_AllowAllPlants>Check this box to allow all plants to be sown (including immersion breaking plants such as anima grass et al)</TKS_AllowAllPlants>
 	<TKSGardensSettings>Gardens</TKSGardensSettings>
+	<TKSGardenSettingsCopiedToClipboard>Garden settings copied to clipboard.</TKSGardenSettingsCopiedToClipboard>
+	<TKSGardenSettingsPastedFromClipboard>Garden settings pasted from clipboard.</TKSGardenSettingsPastedFromClipboard>
 </LanguageData>
