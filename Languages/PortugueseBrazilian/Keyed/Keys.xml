@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Machine-drafted translation, aligned with the official RimWorld wording for key terms but not reviewed by a native speaker.
+     Corrections are welcome: https://github.com/tk421storm/gardens -->
+<LanguageData>
+	<GardenZone>Zona de jardim</GardenZone>
+	<GardenGroup>jardim</GardenGroup>
+	<DesignatorGardenZoneDesc>Cria uma zona onde os colonos tentarão cultivar plantas aleatórias para decoração.</DesignatorGardenZoneDesc>
+	<TKSTabPlants>Plantas</TKSTabPlants>
+	<UnderRequiredFertility>fertilidade do solo abaixo do necessário ({0})</UnderRequiredFertility>
+	<CannotMoveThing>não é possível mover o objeto no caminho {0}</CannotMoveThing>
+	<SnowPreventsPlanting>não é possível plantar na neve</SnowPreventsPlanting>
+	<NotGrowingSeason>não é estação de cultivo neste bioma</NotGrowingSeason>
+	<TKS_AllowAllPlants>Marque para permitir o plantio de todas as plantas (incluindo as que quebram a imersão, como a grama anima)</TKS_AllowAllPlants>
+	<TKSGardensSettings>Gardens</TKSGardensSettings>
+	<TKSGardenSettingsCopiedToClipboard>Configurações do jardim copiadas para a área de transferência.</TKSGardenSettingsCopiedToClipboard>
+	<TKSGardenSettingsPastedFromClipboard>Configurações do jardim coladas da área de transferência.</TKSGardenSettingsPastedFromClipboard>
+	<TKSDebugPrint>Mostrar informações de depuração</TKSDebugPrint>
+</LanguageData>

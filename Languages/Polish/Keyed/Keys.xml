@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Machine-drafted translation, aligned with the official RimWorld wording for key terms but not reviewed by a native speaker.
+     Corrections are welcome: https://github.com/tk421storm/gardens -->
+<LanguageData>
+	<GardenZone>Ogród</GardenZone>
+	<GardenGroup>ogród</GardenGroup>
+	<DesignatorGardenZoneDesc>Utwórz obszar, na którym koloniści będą uprawiać losowe rośliny dla ozdoby.</DesignatorGardenZoneDesc>
+	<TKSTabPlants>Rośliny</TKSTabPlants>
+	<UnderRequiredFertility>żyzność gleby poniżej wymaganej ({0})</UnderRequiredFertility>
+	<CannotMoveThing>nie można przesunąć przeszkadzającego obiektu {0}</CannotMoveThing>
+	<SnowPreventsPlanting>nie można sadzić w śniegu</SnowPreventsPlanting>
+	<NotGrowingSeason>to nie jest teraz sezon wegetacyjny w tym biomie</NotGrowingSeason>
+	<TKS_AllowAllPlants>Zaznacz, aby pozwolić na sadzenie wszystkich roślin (także tych psujących immersję, jak trawa anima)</TKS_AllowAllPlants>
+	<TKSGardensSettings>Gardens</TKSGardensSettings>
+	<TKSGardenSettingsCopiedToClipboard>Skopiowano ustawienia ogrodu do schowka.</TKSGardenSettingsCopiedToClipboard>
+	<TKSGardenSettingsPastedFromClipboard>Wklejono ustawienia ogrodu ze schowka.</TKSGardenSettingsPastedFromClipboard>
+	<TKSDebugPrint>Wypisuj informacje debugowania</TKSDebugPrint>
+</LanguageData>

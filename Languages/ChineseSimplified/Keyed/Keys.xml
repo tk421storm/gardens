@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Machine-drafted translation, aligned with the official RimWorld wording for key terms but not reviewed by a native speaker.
+     Corrections are welcome: https://github.com/tk421storm/gardens -->
+<LanguageData>
+	<GardenZone>花园区</GardenZone>
+	<GardenGroup>花园</GardenGroup>
+	<DesignatorGardenZoneDesc>创建一片可供殖民者随机种植装饰植物的区域。</DesignatorGardenZoneDesc>
+	<TKSTabPlants>植物</TKSTabPlants>
+	<UnderRequiredFertility>土壤肥力低于所需的 {0}</UnderRequiredFertility>
+	<CannotMoveThing>无法移开阻挡的物体 {0}</CannotMoveThing>
+	<SnowPreventsPlanting>无法在雪中种植</SnowPreventsPlanting>
+	<NotGrowingSeason>当前不是该生物群系的生长季节</NotGrowingSeason>
+	<TKS_AllowAllPlants>勾选后允许种植所有植物（包括灵草等破坏沉浸感的植物）</TKS_AllowAllPlants>
+	<TKSGardensSettings>Gardens</TKSGardensSettings>
+	<TKSGardenSettingsCopiedToClipboard>花园设置已复制到剪贴板。</TKSGardenSettingsCopiedToClipboard>
+	<TKSGardenSettingsPastedFromClipboard>已从剪贴板粘贴花园设置。</TKSGardenSettingsPastedFromClipboard>
+	<TKSDebugPrint>输出调试信息</TKSDebugPrint>
+</LanguageData>

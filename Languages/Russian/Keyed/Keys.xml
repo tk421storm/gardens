@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Machine-drafted translation, aligned with the official RimWorld wording for key terms but not reviewed by a native speaker.
+     Corrections are welcome: https://github.com/tk421storm/gardens -->
+<LanguageData>
+	<GardenZone>Сад</GardenZone>
+	<GardenGroup>сад</GardenGroup>
+	<DesignatorGardenZoneDesc>Создать область, где ваши поселенцы будут выращивать случайные растения для украшения.</DesignatorGardenZoneDesc>
+	<TKSTabPlants>Растения</TKSTabPlants>
+	<UnderRequiredFertility>плодородие почвы ниже нужного ({0})</UnderRequiredFertility>
+	<CannotMoveThing>не удаётся убрать мешающий предмет {0}</CannotMoveThing>
+	<SnowPreventsPlanting>нельзя сажать в снегу</SnowPreventsPlanting>
+	<NotGrowingSeason>сейчас не сезон роста в этом биоме</NotGrowingSeason>
+	<TKS_AllowAllPlants>Отметьте, чтобы разрешить сажать любые растения (включая ломающие погружение, например траву души)</TKS_AllowAllPlants>
+	<TKSGardensSettings>Gardens</TKSGardensSettings>
+	<TKSGardenSettingsCopiedToClipboard>Настройки сада скопированы в буфер обмена.</TKSGardenSettingsCopiedToClipboard>
+	<TKSGardenSettingsPastedFromClipboard>Настройки сада вставлены из буфера обмена.</TKSGardenSettingsPastedFromClipboard>
+	<TKSDebugPrint>Выводить отладочную информацию</TKSDebugPrint>
+</LanguageData>
